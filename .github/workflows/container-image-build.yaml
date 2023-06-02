@@ -1,12 +1,11 @@
-name: Build
+name: Container image build
 on:
-  push:
-    branches:
-    - master
+  release:
+    types:
+      - published
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-
 jobs:
   Build:
     runs-on: ubuntu-latest
