@@ -2,7 +2,7 @@ name: Container image build
 on:
   release:
     types:
-      - published
+      - released
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
