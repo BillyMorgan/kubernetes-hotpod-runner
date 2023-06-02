@@ -21,7 +21,7 @@ class PodExec extends Command {
     public const ARG_POD_LABEL_SELECTORS = 'pod-label-selector';
     public const ARG_POD_CONTAINER = 'pod-container';
     public const ARG_COMMAND = 'exec-command';
-    public const ARG_NAMESPACE = 'namespace';
+    public const OPT_NAMESPACE = 'namespace';
     public const OPT_DRYRUN = 'dry-run';
     public const K8S_TOKEN_FILE = '/var/run/secrets/kubernetes.io/serviceaccount/token';
     public const K8S_CA_CERT_FILE = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt';
@@ -32,10 +32,10 @@ class PodExec extends Command {
     {
         $this
             ->setName(self::COMMAND_NAME)
-            ->addArgument(self::ARG_NAMESPACE, InputArgument::REQUIRED, 'Namespace')
             ->addArgument(self::ARG_POD_LABEL_SELECTORS, InputArgument::REQUIRED, 'Pod label selector, comma separated')
             ->addArgument(self::ARG_POD_CONTAINER, InputArgument::REQUIRED, 'The container to run on')
             ->addArgument(self::ARG_COMMAND, InputArgument::REQUIRED|InputArgument::IS_ARRAY, 'Command')
+            ->addOption(self::OPT_NAMESPACE, null, InputOption::VALUE_REQUIRED, 'Namespace of the container to run on')
             ->addOption(self::OPT_DRYRUN, null, InputOption::VALUE_NONE, 'Dry run only');
     }
 
@@ -47,10 +47,20 @@ class PodExec extends Command {
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        if (is_string($inputNamespace = $input->getArgument(self::ARG_NAMESPACE))) {
+        $namespace = null;
+        if (is_string($inputNamespace = $input->getOption(self::OPT_NAMESPACE))) {
             $namespace = $inputNamespace;
-        } else {
-            throw new \RuntimeException('Invalid namespace');
+        } else if (is_string($envNamespace = getenv('NAMESPACE'))) {
+            $namespace = $envNamespace;
+        } else if (
+            is_readable('/var/run/secrets/kubernetes.io/serviceaccount/namespace') &&
+            is_string($serviceAccountNamespace = file_get_contents('/var/run/secrets/kubernetes.io/serviceaccount/namespace'))
+        ) {
+            $namespace = $serviceAccountNamespace;
+        }
+
+        if (null === $namespace) {
+            throw new \RuntimeException('Unable to determine namespace');
         }
 
         if (is_string($inputPodContainer = $input->getArgument(self::ARG_POD_CONTAINER))) {
