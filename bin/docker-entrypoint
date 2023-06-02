@@ -1,0 +1,16 @@
+#!/usr/bin/env php
+<?php
+
+use Symfony\Component\Console\Application;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$application = new Application();
+$dir = new DirectoryIterator(__DIR__ . '/../src/Commands');
+foreach ($dir as $fileinfo) {
+    if (!$fileinfo->isDot()) {
+        $className = sprintf('App\Commands\%s', explode('.', $fileinfo->getFilename())[0]);
+        $application->add(new $className());
+    }
+}
+$application->run();
